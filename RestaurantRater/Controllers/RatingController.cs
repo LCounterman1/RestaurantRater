@@ -1,6 +1,7 @@
 ﻿using RestaurantRater.Models;
 using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -11,10 +12,12 @@ namespace RestaurantRater.Controllers
 {
     public class RatingController : ApiController
     {
-        private readonly RestaurantDbContext _context = new RestaurantDbContext
+        private readonly RestaurantDbContext _context = new RestaurantDbContext();
 
         // Creat new ratings
         [HttpPost]
+
+        // Create the Rating
         public async Task<IHttpActionResult> CreateRating([FromBody] Rating model)
         {
             // check if model is null
@@ -32,7 +35,7 @@ namespace RestaurantRater.Controllers
                     $" does not exist.");
 
 
-            // Create the Rating
+            
 
             // Add to the Rating table
             //_context.Ratings.Add(model);
@@ -47,17 +50,97 @@ namespace RestaurantRater.Controllers
 
         }
 
-
-
-
         //Get a Rating by its id
 
+        [HttpGet]
+        public async Task<IHttpActionResult> GetById([FromUri] int id)
+        {
+            Rating rating = await _context.Ratings.FindAsync(id);
+
+            if(rating != null)
+            {
+                return Ok(rating);
+            }
+            return NotFound();
+
+        }
+
         // Get All Ratings
+        [HttpGet]
+        public async Task<IHttpActionResult> GetAll()
+        {
+            List<Rating> ratings = await _context.Ratings.ToListAsync();
+            return Ok(ratings);
+        }
+
 
         // Get All Ratings for specific restaurant by restaurant id
+        [HttpGet]
+
+        public async Task<IHttpActionResult> GetAllRatingsByRestaurant([FromUri] int id)
+        {
+            Restaurant restaurant = await _context.Restaurants.FindAsync(id);
+
+            if(restaurant != null)
+            {
+                return Ok(restaurant.Rating);
+            }
+
+            return NotFound();
+
+        }
+
 
         // Update a Rating
+        // ***Not sure why we would want to create access to change/update a rating... did this more for the practice of the idea of updating results. *** 
+        [HttpPut]
+        public async Task<IHttpActionResult> UpdateRating([FromUri] int id, [FromBody] Rating updatedRating)
+        {
+            if(id != updatedRating?.Id)
+            {
+                return BadRequest("Id's do not match.");
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            Rating ratings = await _context.Ratings.FindAsync(id);
+
+            if (ratings is null)
+                return NotFound();
+
+            ratings.EnvironmentalScore = updatedRating.EnvironmentalScore;
+            ratings.CleanlinessScore = updatedRating.CleanlinessScore;
+            ratings.FoodScore = updatedRating.FoodScore;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("The rating has been updated");
+
+        }
+
 
         // Delete a Rating
+        // ***Not sure why we would want to create access to delete a rating... did this more for the practice of the idea of deleting results. *** 
+        [HttpDelete]
+        public async Task<IHttpActionResult> DeleteRating([FromUri] int id)
+        {
+            Rating rating = await _context.Ratings.FindAsync(id);
+
+            if (rating is null)
+                return NotFound();
+
+            _context.Ratings.Remove(rating);
+
+            if(await _context.SaveChangesAsync() == 1)
+            {
+                return Ok("The rating has been deleted.");
+            }
+
+            return InternalServerError();
+
+
+        }
+
     }
 }
